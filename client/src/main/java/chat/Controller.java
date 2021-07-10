@@ -45,6 +45,7 @@ public class Controller implements Initializable {
     private void connect() {
         try {
             socket = new Socket("localhost", 8189);
+            socket.setSoTimeout(10000);
             this.in = new DataInputStream(socket.getInputStream());
             this.out = new DataOutputStream(socket.getOutputStream());
             setAuth(false);
