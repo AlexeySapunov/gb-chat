@@ -10,6 +10,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +52,7 @@ public class Controller implements Initializable {
 
             new Thread(() -> {
                 try {
+                    socket.setSoTimeout(120000);
                     while (true) { // Ждем сообщения об успешной авторизации ("/authOk")
                         final String msgAuth = in.readUTF();
                         System.out.println("CLIENT: Received message: " + msgAuth);
@@ -59,6 +61,11 @@ public class Controller implements Initializable {
                             nick = msgAuth.split("\\s")[1];
                             textArea.appendText("Успешная авторизация под ником " + nick + "\n");
                             break;
+                        }
+                        //noinspection ConstantConditions
+                        if (setAuth(false)) {
+                            socket.setSoTimeout(0);
+                            return;
                         }
                         textArea.appendText(msgAuth + "\n");
                     }
@@ -80,6 +87,12 @@ public class Controller implements Initializable {
                         }
                         textArea.appendText(msgFromServer + "\n");
                     }
+                } catch (SocketTimeoutException e) {
+                    try {
+                        throw e;
+                    } catch (SocketTimeoutException s) {
+                        s.printStackTrace();
+                    }
                 } catch (IOException e) {
                     e.printStackTrace();
                     throw new RuntimeException(e);
@@ -100,7 +113,7 @@ public class Controller implements Initializable {
         }
     }
 
-    private void setAuth(boolean isAuthSuccess) {
+    private boolean setAuth(boolean isAuthSuccess) {
         authPanel.setVisible(!isAuthSuccess);
         authPanel.setManaged(!isAuthSuccess);
 
@@ -109,6 +122,7 @@ public class Controller implements Initializable {
 
         clientPanel.setVisible(isAuthSuccess);
         clientPanel.setManaged(isAuthSuccess);
+        return isAuthSuccess;
     }
 
     public void sendAuth() {
